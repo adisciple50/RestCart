@@ -3,6 +3,9 @@ from money import Money, xrates
 
 xrates.install('money.exchange.SimpleBackend')
 
+# counting tools
+from collections import Counter
+from itertools import chain
 
 
 # use google datastore to pickle an order!
@@ -35,6 +38,27 @@ class Order:
         for line in range(quantity):
             self.order_dict.update({str(item):str(cost)})
         return self.order_dict
+    def to_paypal_transaction_items_list(self):
+        # convert order_dict to {{"item":{price:"1.00",quantity:1},{"item":{price:"1.00",quantity:1}}
+        unique_items = {}
+        for line in self.order_dict:
+            key = dict(line).keys()
+            price = dict(line).values()
+            if key in unique_items:
+                unique_items[str(key)]["quantity"] += 1
+            elif key not in unique_items:
+                unique_items.update({str(key):{"price":price,"quantity":1}})
+
+        paypal_items = {"items":[]}
+
+        for line in unique_items:
+            """
+            line.keys() # line title / item name
+            line["item"]["price"]
+            line["item"]["quantity"]
+            """
+            paypal_items["items"].append({"name":line.keys()[0],"sku":line.keys()[0],"price":line["item"]["price"],"currency":str(self.total.currency),"quantity":line["item"]["quantity"]})
+        return paypal_items
 
 
 
