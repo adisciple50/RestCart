@@ -12,12 +12,14 @@ paypalrestsdk.configure(json.loads('settings.json')['paypal'])
 
 class Transaction:
         def __init__(self,user:str,password:str,order:Order,currency_symbol='GBP'):
-            self.money = Order.total
+            self.money = order.total
             self.status = "Started"
             self.status_code = 0
             self.order = Order
             self.transaction_id = random.randint(0,100000000000000000000000000000000000)
             self.payment = ""
+            self.total = Money()
+
         def open_invoice(self):
             self.status = "Invoice Open"
             self.status_code = 1
@@ -35,7 +37,7 @@ class Transaction:
             "transactions": [{
                 "item_list": self.order.to_paypal_transaction_items_list(),
                 "amount": {
-                    "total": "1.00",
+                    "total": str(self.order.total),
                     "currency": "GBP"},
                 "description": "Payment To GlueDot Candles"}]})
 
