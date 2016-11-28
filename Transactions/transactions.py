@@ -23,23 +23,25 @@ class Transaction:
         def open_invoice(self):
             self.status = "Invoice Open"
             self.status_code = 1
-            start_transaction_url = {'transaction_url':'url'}
-            return start_transaction_url
-        def process_payment(self):
+            redirect_URLS = {"return_url": "http://localhost:3000/process","cancel_url": "http://localhost:3000/cancel"}
+            return redirect_URLS
+            # TODO
+        def process_payment(self,redirect_urls):
             self.payment = paypalrestsdk.Payment({
             "intent": "sale",
             "payer": {
-                "payment_method": "paypal"},
-                "redirect_urls": {
-                    "return_url": "http://localhost:3000/process",
-                    "cancel_url": "http://localhost:3000/cancel"
-                },
+                "payment_method": "paypal"
+            },
+            "redirect_urls": redirect_urls,
             "transactions": [{
                 "item_list": self.order.to_paypal_transaction_items_list(),
                 "amount": {
                     "total": str(self.order.total),
-                    "currency": "GBP"},
-                "description": "Payment To GlueDot Candles"}]})
+                    "currency": "GBP"
+                },
+                "description": "Payment To GlueDot Candles"
+                }]
+            })
 
             if self.payment.create():
                 print("Payment created successfully")
