@@ -1,4 +1,6 @@
-from .objects import Order
+# from importlib._bootstrap_external import _check_name
+
+from Transactions.objects import Order
 
 from money import Money
 # Currency Conversion Handling
@@ -8,17 +10,23 @@ import json
 import random
 
 import paypalrestsdk
-paypalrestsdk.configure(json.loads('settings.json')['paypal'])
+
+settings_file = open('../settings.json')
+settings = settings_file.read()
+
+settings_json = json.loads(settings)
+
+paypalrestsdk.configure(settings_json["paypal"])
 
 class Transaction:
         def __init__(self,user:str,password:str,order:Order,currency_symbol='GBP'):
-            self.money = order.total
+            self.money = order.__money__()
             self.status = "Started"
             self.status_code = 0
-            self.order = Order
+            self.order = order
             self.transaction_id = random.randint(0,100000000000000000000000000000000000)
             self.payment = ""
-            self.total = Money()
+            self.total = order.total.amount
 
         def open_invoice(self):
             self.status = "Invoice Open"
@@ -26,17 +34,19 @@ class Transaction:
             redirect_URLS = {"return_url": "http://localhost:3000/process","cancel_url": "http://localhost:3000/cancel"}
             return redirect_URLS
             # TODO
-        def process_payment(self,redirect_urls):
+        def process_payment(self):
+            print("order total: ",self.order.total.amount)
+            print("paypal order is: ",self.order.to_paypal_transaction_items_list())
             self.payment = paypalrestsdk.Payment({
             "intent": "sale",
             "payer": {
                 "payment_method": "paypal"
             },
-            "redirect_urls": redirect_urls,
+            "redirect_urls": self.open_invoice(),
             "transactions": [{
                 "item_list": self.order.to_paypal_transaction_items_list(),
                 "amount": {
-                    "total": str(self.order.total),
+                    "total": str(self.total),
                     "currency": "GBP"
                 },
                 "description": "Payment To GlueDot Candles"
@@ -75,3 +85,10 @@ class Transaction:
             return self.status
         def __int__(self):
             return int(self.status_code)
+
+if __name__ == "__main__":
+    # from .objects import Order
+    o = Order(currency_code="GBP")
+    o.from_dict({"dildo":"10.00","bananana":"20.00","dildo":"20.00"}) # second dildo overrides first dildo, counting doesnt work!
+    t = Transaction("deddokatana","Bananadine777",o)
+    print(t.process_payment())

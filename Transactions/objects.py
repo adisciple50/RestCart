@@ -11,12 +11,15 @@ from itertools import chain
 # use google datastore to pickle an order!
 class Order:
     def __init__(self,currency_code:str='GBP'):
+        self.currency_code = currency_code
         self.order_dict = {}
-        self.total = Money(amount=0,currency=currency_code)
+        print(self.currency_code)
+        self.total = Money(amount=0,currency=self.currency_code)
 
     def _new_total(self):
-        for line in self.order_dict:
-            self.total.amount += Decimal(line[1])
+        for name,value in self.order_dict.items():
+            print(name,value)
+            self.total = self.total + Money(Decimal(value),self.currency_code)
 
 
     def from_dict(self,item_cost_pairs:dict):
@@ -47,9 +50,10 @@ class Order:
         # convert order_dict to {{"item":{price:"1.00",quantity:1},{"item":{price:"1.00",quantity:1}}
         self._new_total() # just for foolproofing
         unique_items = {}
-        for line in self.order_dict:
-            key = dict(line).keys()
-            price = dict(line).values()
+
+        for key,price in self.order_dict.items():
+            # key = dict(line).keys()
+            # price = dict(line).values()
             if key in unique_items:
                 unique_items[str(key)]["quantity"] += 1
             elif key not in unique_items:
@@ -57,14 +61,16 @@ class Order:
 
         paypal_items = {"items":[]}
 
-        for line in unique_items:
-            """
-            line.keys() # line title / item name
-            line["item"]["price"]
-            line["item"]["quantity"]
-            """
-            paypal_items["items"].append({"name":line.keys()[0],"sku":line.keys()[0],"price":line["item"]["price"],"currency":str(self.total.currency),"quantity":line["item"]["quantity"]})
+        print(unique_items)
+
+        for item, properties in unique_items.items():
+            paypal_items["items"].append({"name":item,"sku":item,"price":properties["price"],"currency":str(self.total.currency),"quantity":properties["quantity"]})
+        print(paypal_items)
         return paypal_items
 
+    def __money__(self):
+        assert isinstance(self.total,Money)
+        return self.total
 
-
+    def __decimal__(self):
+        return Decimal(self.total.amount)
