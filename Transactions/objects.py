@@ -22,19 +22,13 @@ class Order:
             self.total = self.total + Money(Decimal(value),self.currency_code)
 
 
-    def from_dict(self,item_cost_pairs:dict):
-        self.order_dict.update(item_cost_pairs)
+    def add_to_folder_from_dict(self, paypal_transaction_item_list:dict):
+        self.order_dict.update(paypal_transaction_item_list)
         self._new_total()
         return self.order_dict
 
-    def from_tuple_list(self,item_price_pairs:dict):
-        order_dict = {}
-        for line in item_price_pairs:
-            order_dict.update({str(line[0]):str(line[1])})
-        self.order_dict.update(order_dict)
-        self._new_total()
-        return self.order_dict
-
+    def from_json(self,paypal_):
+        pass
     def total_to_gbp(self):
         return self.total.to('GBP')
 
@@ -47,7 +41,7 @@ class Order:
         self._new_total()
         return self.order_dict
     def to_paypal_transaction_items_list(self):
-        # convert order_dict to {{"item":{price:"1.00",quantity:1},{"item":{price:"1.00",quantity:1}}
+        # convert order_dict to {"wax":{price:"1.00",quantity:1},"candle":{price:"1.00",quantity:2}}
         self._new_total() # just for foolproofing
         unique_items = {}
 

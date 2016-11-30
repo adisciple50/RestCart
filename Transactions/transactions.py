@@ -89,6 +89,6 @@ class Transaction:
 if __name__ == "__main__":
     # from .objects import Order
     o = Order(currency_code="GBP")
-    o.from_dict({"dildo":"10.00","bananana":"20.00","dildo":"20.00"}) # second dildo overrides first dildo, counting doesnt work!
+    o.add_to_folder_from_dict({"wax": {"price":"10.00","quantity":3}, "Candles": {"price":"10.00","quantity":2}}) # second dildo overrides first dildo, counting doesnt work!
     t = Transaction("deddokatana","Bananadine777",o)
     print(t.process_payment())
