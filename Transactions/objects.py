@@ -7,6 +7,7 @@ xrates.install('money.exchange.SimpleBackend')
 from collections import Counter
 from itertools import chain
 
+import json
 
 # use google datastore to pickle an order!
 class Order:
@@ -17,18 +18,22 @@ class Order:
         self.total = Money(amount=0,currency=self.currency_code)
 
     def _new_total(self):
-        for name,value in self.order_dict.items():
-            print(name,value)
-            self.total = self.total + Money(Decimal(value),self.currency_code)
+        for name,properties in self.order_dict.items():
+            print(name,properties)
+            subtotal = Decimal(Decimal(properties["price"]) * int(properties["quantity"]))
+            self.total = self.total + Money(subtotal,self.currency_code)
 
 
-    def add_to_folder_from_dict(self, paypal_transaction_item_list:dict):
+    def add_to_order_from_dict(self, paypal_transaction_item_list:dict):
         self.order_dict.update(paypal_transaction_item_list)
         self._new_total()
         return self.order_dict
 
-    def from_json(self,paypal_):
-        pass
+    def from_json(self,order_json:str):
+        self.order_dict = json.loads(order_json)
+        self._new_total()
+        return self.order_dict
+
     def total_to_gbp(self):
         return self.total.to('GBP')
 
@@ -43,21 +48,12 @@ class Order:
     def to_paypal_transaction_items_list(self):
         # convert order_dict to {"wax":{price:"1.00",quantity:1},"candle":{price:"1.00",quantity:2}}
         self._new_total() # just for foolproofing
-        unique_items = {}
-
-        for key,price in self.order_dict.items():
-            # key = dict(line).keys()
-            # price = dict(line).values()
-            if key in unique_items:
-                unique_items[str(key)]["quantity"] += 1
-            elif key not in unique_items:
-                unique_items.update({str(key):{"price":price,"quantity":1}})
 
         paypal_items = {"items":[]}
 
-        print(unique_items)
+        print(self.order_dict)
 
-        for item, properties in unique_items.items():
+        for item, properties in self.order_dict.items():
             paypal_items["items"].append({"name":item,"sku":item,"price":properties["price"],"currency":str(self.total.currency),"quantity":properties["quantity"]})
         print(paypal_items)
         return paypal_items

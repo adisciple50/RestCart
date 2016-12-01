@@ -11,6 +11,12 @@ import random
 
 import paypalrestsdk
 
+# google datastore
+
+from google.cloud import datastore
+
+dsc = datastore.Client()
+
 settings_file = open('../settings.json')
 settings = settings_file.read()
 
@@ -27,11 +33,16 @@ class Transaction:
             self.transaction_id = random.randint(0,100000000000000000000000000000000000)
             self.payment = ""
             self.total = order.total.amount
+            self.ds_transaction_id = dsc.allocate_ids("checkout",1)
+            self.ds_transaction = dsc.Entity(key=dsc.key("CheckoutTransaction",str(self.ds_transaction_id)))
 
         def open_invoice(self):
             self.status = "Invoice Open"
             self.status_code = 1
             redirect_URLS = {"return_url": "http://localhost:3000/process","cancel_url": "http://localhost:3000/cancel"}
+            self.ds_transaction["status"] = self.status
+            self.ds_transaction["status_code"] = self.status_code
+            dsc.put(self.ds_transaction)
             return redirect_URLS
             # TODO
         def process_payment(self):
@@ -52,9 +63,15 @@ class Transaction:
                 "description": "Payment To GlueDot Candles"
                 }]
             })
-
+            self.status = "Creating Payment URL"
+            self.ds_transaction["status"] = self.status
+            dsc.put(self.ds_transaction)
             if self.payment.create():
                 print("Payment created successfully")
+                self.status = "Payment Created Successfully"
+                self.ds_transaction["status"] = self.status
+                dsc.put(self.ds_transaction)
+
                 for link in self.payment.links:
                     if link.method == "REDIRECT":
                         # Capture redirect url
@@ -63,25 +80,42 @@ class Transaction:
                 print(self.payment.error)
 
             self.status_code = 2
-            self.status = "Processing Payment"
-            return (redirect_url)
+            self.ds_transaction["status_code"] = self.status_code
+            self.status = "Payment URL Served"
+            self.ds_transaction["status"] = self.status
+            dsc.put(self.ds_transaction)
+            return {"transaction_url":redirect_url,"transaction_id":str(self.ds_transaction_id)}
+
         def confirm_payment(self):
             self.status_code = 3
+            self.ds_transaction["status_code"] = self.status_code
             if self.payment.execute({"payer_id": self.payment.id}):
-                self.status = "Payment Succesful"
+                self.status = "Payment Successful"
                 print("Payment[%s] execute successfully" % (self.payment.id))
                 self.status_code = 6
+                self.ds_transaction["status_code"] = self.status_code
+                self.ds_transaction["status"] = self.status
+                dsc.put(self.ds_transaction)
             else:
                 print(self.payment.error)
                 self.status = "Payment Unsuccesful"
                 self.status_code = 4
+                self.ds_transaction["status_code"] = self.status_code
+                self.ds_transaction["status"] = self.status
+                dsc.put(self.ds_transaction)
         def close_invoice(self):
             if self.status == "Payment Succesful":
                 self.status_code = 7
+                self.ds_transaction["status_code"] = self.status_code
                 self.status = "Invoice Paid"
+                self.ds_transaction["status"] = self.status
+                dsc.put(self.ds_transaction)
             elif self.status == "Payment Unsuccesful":
                 self.status_code = 5
+                self.ds_transaction["status_code"] = self.status_code
                 self.status = "Invoice Canceled"
+                self.ds_transaction["status"] = self.status
+                dsc.put(self.ds_transaction)
             return self.status
         def __int__(self):
             return int(self.status_code)
@@ -89,6 +123,6 @@ class Transaction:
 if __name__ == "__main__":
     # from .objects import Order
     o = Order(currency_code="GBP")
-    o.add_to_folder_from_dict({"wax": {"price":"10.00","quantity":3}, "Candles": {"price":"10.00","quantity":2}}) # second dildo overrides first dildo, counting doesnt work!
+    o.add_to_folder_from_dict({"wax": {"price":"10.00","quantity":3}, "Candles": {"price":"10.00","quantity":2}}) # use this format when billing!
     t = Transaction("deddokatana","Bananadine777",o)
     print(t.process_payment())
