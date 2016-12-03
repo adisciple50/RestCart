@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import *
 from money import Money, xrates
 
 xrates.install('money.exchange.SimpleBackend')
@@ -19,8 +19,8 @@ class Order:
 
     def _new_total(self):
         for name,properties in self.order_dict.items():
-            print(name,properties)
-            subtotal = Decimal(Decimal(properties["price"]) * int(properties["quantity"]))
+            # print("Properties",properties["price"]) debbuging
+            subtotal = Decimal(properties["price"]) * Decimal(int(properties["quantity"]))
             self.total = self.total + Money(subtotal,self.currency_code)
 
 

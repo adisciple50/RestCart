@@ -13,9 +13,9 @@ import paypalrestsdk
 
 # google datastore
 
-from google.cloud import datastore
+from google.cloud import datastore as ds
 
-dsc = datastore.Client()
+dsc = ds.Client()
 
 settings_file = open('../settings.json')
 settings = settings_file.read()
@@ -33,8 +33,8 @@ class Transaction:
             self.transaction_id = random.randint(0,100000000000000000000000000000000000)
             self.payment = ""
             self.total = order.total.amount
-            self.ds_transaction_id = dsc.allocate_ids("checkout",1)
-            self.ds_transaction = dsc.Entity(key=dsc.key("CheckoutTransaction",str(self.ds_transaction_id)))
+            self.ds_transaction_id = dsc.key("CheckoutTransaction") # this string is concatanated with the autoincrement - the keyfunction provisions a new key.
+            self.ds_transaction = ds.Entity(key=self.ds_transaction_id)
 
         def open_invoice(self):
             self.status = "Invoice Open"
@@ -84,7 +84,7 @@ class Transaction:
             self.status = "Payment URL Served"
             self.ds_transaction["status"] = self.status
             dsc.put(self.ds_transaction)
-            return {"transaction_url":redirect_url,"transaction_id":str(self.ds_transaction_id)}
+            return {"transaction_url":redirect_url,"transaction_id":str(self.ds_transaction.key.id)}
 
         def confirm_payment(self):
             self.status_code = 3
@@ -123,6 +123,6 @@ class Transaction:
 if __name__ == "__main__":
     # from .objects import Order
     o = Order(currency_code="GBP")
-    o.add_to_folder_from_dict({"wax": {"price":"10.00","quantity":3}, "Candles": {"price":"10.00","quantity":2}}) # use this format when billing!
+    o.add_to_order_from_dict({"Wax": {"price":"10.00","quantity":3}, "Candles": {"price":"10.00","quantity":2}}) # use this format when billing!
     t = Transaction("deddokatana","Bananadine777",o)
     print(t.process_payment())
